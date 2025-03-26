@@ -1,0 +1,47 @@
+services: #같은 서비스에 있으면 기본적으로 하나의 네트워크로 전부 묶임
+  server-con: #실행할 컨테이너의 이름
+    image: sidosea470/nodeserver:1 #가져올 이미지:태그
+    build: . #해당 경로에 있는 도커파일 가져다가 자동으로 이미지 생성 후 컨테이너 띄우기
+    develop:
+      watch:
+        - action: sync+restart #변동사항이 생기는 경우, restart (단, build가 존재해야함)
+          path: . #원하는 경로에
+          target: /app #복붙하기
+        - action: rebuild 
+          path: package.json #이 파일이 변경될 경우 rebuild
+
+    networks: #각각 다른 네트워크를 사용하고 싶은 경우 
+      - mynet1 #한번에 하나 이상의 네트워크 사용 가능
+      - mynet2
+    ports: #사용할 포트
+    - 8080:8080
+    # depends_on: #db-con이 실행중이어야만 실행 가능하다
+    #   - db-con
+  nginx-con:
+    image: sidosea470/nginx:1
+    build: . 
+    develop:
+      watch:
+        - action: sync+restart 
+          path: . 
+          target: /app 
+    networks:
+      - mynet1
+    ports:
+    - 80:80
+    depends_on:
+      - server-con
+  db-con:
+    image: postgres:16.8-alpine3.20
+    networks:
+      - mynet2 #1에 있는 nginx랑은 통신 불가능
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=qwer1234
+      - POSTGRES_DB=${POSTGRES_DB}
+    volumes:
+      - ./postgreSQL:/var/lib/postgres/data
+
+networks:
+  mynet1:
+  mynet2:
